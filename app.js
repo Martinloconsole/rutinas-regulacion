@@ -3,9 +3,7 @@
    RUTINAS DE REGULACIÓN — Lógica frontend
    ===================================================================== */
 
-// 👉 Pega aquí la URL de tu Web App de Google Apps Script (termina en /exec).
-//    Si la dejas vacía, la app funciona igual, pero solo guarda en este dispositivo.
-const API_URL = "https://script.google.com/macros/s/AKfycbwMG7RkeIXtO7dDJL4TuvWD-q3oE2qb7sdr9U10PZk1TiGTWCuu5bSPddb8D0fdoA/exec";
+// La URL del Web App de Google Apps Script (API_URL) se configura en config.js
 
 const LS_KEY = "rutinas_regulacion_v1";
 const PENDING_KEY = "rutinas_regulacion_pending_v1";
@@ -117,15 +115,17 @@ async function pull() {
 }
 
 /* ---------- Acciones ---------- */
-function toggleHabit(id) {
+function toggleHabit(id, date = selectedDate) {
   const h = state.habits.find(x => x.id === id);
   if (!h) return;
-  const value = !isDone(selectedDate, id);
-  (state.logs[selectedDate] = state.logs[selectedDate] || {})[id] = value;
+  const value = !isDone(date, id);
+  (state.logs[date] = state.logs[date] || {})[id] = value;
   saveState();
   renderDashboard();
+  renderSheet();
+  renderStats();
   queueSync({
-    fecha: selectedDate,
+    fecha: date,
     momento: PERIOD_LABEL[h.period],
     habito: h.name,
     completado: value ? "Sí" : "No"
@@ -223,53 +223,159 @@ function renderDashboard(scrollToSelected = false) {
   updateScrollTheme();
 }
 
+/* ---------- Semanas de lunes a domingo ---------- */
+const WEEK_SHORT = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+const WEEK_2 = ["Lu", "Ma", "Mi", "Ju", "Vi", "Sá", "Do"];
+const MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+const mondayOf = d => addDays(d, -((d.getDay() + 6) % 7));
+const weekIdx = d => (d.getDay() + 6) % 7; // 0 = lunes … 6 = domingo
+const rangeLabel = (a, b) => `${a.getDate()} ${MONTHS[a.getMonth()].slice(0, 3)} – ${b.getDate()} ${MONTHS[b.getMonth()].slice(0, 3)}`;
+
+function pctFor(period, dateStr) {
+  const hs = state.habits.filter(h => h.period === period);
+  return hs.length ? Math.round(hs.filter(h => isDone(dateStr, h.id)).length / hs.length * 100) : 0;
+}
+
 /* ---------- Render: rendimiento ---------- */
-function renderStats() {
+const statsView = { mode: "week", offset: 0 };
+
+function statsRange() {
   const today = new Date();
-  const days = Array.from({ length: 7 }, (_, i) => addDays(today, i - 6));
+  const todayStr = ymd(today);
+  if (statsView.mode === "week") {
+    const start = addDays(mondayOf(today), statsView.offset * 7);
+    const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
+    return { days, todayStr, label: rangeLabel(days[0], days[6]) };
+  }
+  const first = new Date(today.getFullYear(), today.getMonth() + statsView.offset, 1);
+  const n = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+  const days = Array.from({ length: n }, (_, i) => new Date(first.getFullYear(), first.getMonth(), i + 1));
+  return { days, todayStr, label: `${MONTHS[first.getMonth()]} ${first.getFullYear()}` };
+}
+
+function renderStats() {
+  const r = statsRange();
+  const isWeek = statsView.mode === "week";
+  $("#statsLabel").textContent = r.label;
+  $("#statsNext").disabled = statsView.offset >= 0;
+  $("#statsMode").value = statsView.mode;
+
   const C = 2 * Math.PI * 46;
-  const info = { dia: { title: "☀️ Hábitos diurnos" }, noche: { title: "🌙 Hábitos nocturnos" } };
+  const titles = { dia: "☀️ Hábitos diurnos", noche: "🌙 Hábitos nocturnos" };
 
   ["dia", "noche"].forEach(p => {
-    const hs = state.habits.filter(h => h.period === p);
-    const pct = d => hs.length ? Math.round(hs.filter(h => isDone(ymd(d), h.id)).length / hs.length * 100) : 0;
-    const vals = days.map(pct);
-    const week = Math.round(vals.reduce((a, b) => a + b, 0) / 7);
-    const best = Math.max(...vals);
     const box = $("#stats-" + p);
-
-    if (!hs.length) {
-      box.innerHTML = `<h2>${info[p].title}</h2><p class="empty">Aún no hay hábitos en esta categoría.</p>`;
+    if (!state.habits.some(h => h.period === p)) {
+      box.innerHTML = `<h2>${titles[p]}</h2><p class="empty">Aún no hay hábitos en esta categoría.</p>`;
       return;
     }
-    const bars = days.map((d, i) => `
-      <div class="bar-col${i === 6 ? " today" : ""}">
-        <div class="bar-track"><div class="bar-fill" style="height:${vals[i]}%"></div></div>
-        <b>${vals[i]}%</b>
-        <span>${DAY_NAMES[d.getDay()].slice(0, 1)}</span>
-      </div>`).join("");
+    const items = r.days.map(d => {
+      const s = ymd(d);
+      const future = s > r.todayStr;
+      return { d, s, future, v: future ? 0 : pctFor(p, s) };
+    });
+    const past = items.filter(i => !i.future);
+    const avg = past.length ? Math.round(past.reduce((a, i) => a + i.v, 0) / past.length) : 0;
+    const best = past.length ? Math.max(...past.map(i => i.v)) : 0;
+    const full = past.filter(i => i.v === 100).length;
+    const todayItem = items.find(i => i.s === r.todayStr);
+
+    const meta = `
+      <p>${isWeek ? "Semana" : "Mes"}: <b>${avg}%</b></p>
+      ${todayItem ? `<p>Hoy: <b>${todayItem.v}%</b></p>` : `<p>Días al 100%: <b>${full}</b></p>`}
+      <p>Mejor día: <b>${best}%</b></p>`;
+
+    let chart;
+    if (isWeek) {
+      chart = `<div class="bars">${items.map(i => `
+        <div class="bar-col${i.s === r.todayStr ? " today" : ""}${i.future ? " future" : ""}">
+          <div class="bar-track"><div class="bar-fill" style="height:${i.v}%"></div></div>
+          <b>${i.future ? "–" : i.v + "%"}</b>
+          <span>${WEEK_SHORT[weekIdx(i.d)]}</span>
+        </div>`).join("")}</div>`;
+    } else {
+      const lead = weekIdx(items[0].d);
+      const blanks = Array.from({ length: lead }, () => '<span class="cal-cell blank"></span>').join("");
+      const cells = items.map(i => `
+        <span class="cal-cell${i.s === r.todayStr ? " today" : ""}${i.future ? " future" : ""}"
+              style="--p:${(i.v / 100).toFixed(2)}" title="${i.future ? "" : i.v + "%"}"><i>${i.d.getDate()}</i></span>`).join("");
+      chart = `<div class="cal">
+        <div class="cal-head">${WEEK_2.map(x => `<span>${x}</span>`).join("")}</div>
+        <div class="cal-grid">${blanks}${cells}</div>
+        <p class="cal-legend">Más color = mayor cumplimiento ese día.</p>
+      </div>`;
+    }
 
     box.innerHTML = `
-      <h2>${info[p].title}</h2>
+      <h2>${titles[p]}</h2>
       <div class="stats-top">
-        <svg class="donut" viewBox="0 0 112 112" role="img" aria-label="Cumplimiento semanal ${week}%">
+        <svg class="donut" viewBox="0 0 112 112" role="img" aria-label="Cumplimiento ${avg}%">
           <circle class="d-bg" cx="56" cy="56" r="46"/>
-          <circle class="d-fg" cx="56" cy="56" r="46" stroke-dasharray="${(C * week / 100).toFixed(1)} ${C.toFixed(1)}"/>
-          <text x="56" y="56">${week}%</text>
+          <circle class="d-fg" cx="56" cy="56" r="46" stroke-dasharray="${(C * avg / 100).toFixed(1)} ${C.toFixed(1)}"/>
+          <text x="56" y="56">${avg}%</text>
         </svg>
-        <div class="stats-meta">
-          <p>Semana: <b>${week}%</b></p>
-          <p>Hoy: <b>${vals[6]}%</b></p>
-          <p>Mejor día: <b>${best}%</b></p>
-        </div>
+        <div class="stats-meta">${meta}</div>
       </div>
-      <div class="bars">${bars}</div>`;
+      ${chart}`;
   });
 }
+
+$("#statsMode").addEventListener("change", e => { statsView.mode = e.target.value; statsView.offset = 0; renderStats(); });
+$("#statsPrev").addEventListener("click", () => { statsView.offset--; renderStats(); });
+$("#statsNext").addEventListener("click", () => { if (statsView.offset < 0) { statsView.offset++; renderStats(); } });
+
+/* ---------- Render: planilla semanal ---------- */
+const sheetView = { offset: 0 };
+
+function renderSheet() {
+  const todayStr = ymd(new Date());
+  const start = addDays(mondayOf(new Date()), sheetView.offset * 7);
+  const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
+  $("#sheetLabel").textContent = rangeLabel(days[0], days[6]);
+  $("#sheetNext").disabled = sheetView.offset >= 0;
+
+  const box = $("#sheetGrid");
+  box.replaceChildren();
+
+  const head = el("div", "sheet-row");
+  head.appendChild(el("span", "sheet-name"));
+  days.forEach(d => {
+    const c = el("span", "sheet-day" + (ymd(d) === todayStr ? " today" : ""));
+    c.append(el("small", null, WEEK_SHORT[weekIdx(d)]), el("b", null, String(d.getDate())));
+    head.appendChild(c);
+  });
+  box.appendChild(head);
+
+  ["dia", "noche"].forEach(p => {
+    box.appendChild(el("div", "sheet-group", p === "dia" ? "☀️ Día" : "🌙 Noche"));
+    const list = habitsOf(p);
+    if (!list.length) { box.appendChild(el("div", "empty", "Sin hábitos.")); return; }
+    list.forEach(h => {
+      const row = el("div", "sheet-row");
+      row.appendChild(el("span", "sheet-name", h.name));
+      days.forEach(d => {
+        const s = ymd(d);
+        const done = isDone(s, h.id);
+        const future = s > todayStr;
+        const b = el("button", "sheet-cell" + (done ? " done" : "") + (future ? " future" : ""));
+        b.type = "button";
+        b.disabled = future;
+        b.setAttribute("aria-pressed", String(done));
+        b.setAttribute("aria-label", `${h.name}, ${s}: ${done ? "hecho" : "pendiente"}`);
+        b.addEventListener("click", () => toggleHabit(h.id, s));
+        row.appendChild(b);
+      });
+      box.appendChild(row);
+    });
+  });
+}
+$("#sheetPrev").addEventListener("click", () => { sheetView.offset--; renderSheet(); });
+$("#sheetNext").addEventListener("click", () => { if (sheetView.offset < 0) { sheetView.offset++; renderSheet(); } });
 
 function renderAll() {
   renderConfig();
   renderDashboard();
+  renderSheet();
   renderStats();
 }
 
@@ -281,6 +387,7 @@ function showView(name) {
   $$(".bottom-nav button").forEach(b => b.classList.toggle("active", b.dataset.view === name));
   window.scrollTo(0, 0);
   if (name === "stats") renderStats();
+  if (name === "sheet") renderSheet();
   if (name === "dashboard") renderDashboard(true);
   updateScrollTheme();
 }
@@ -443,6 +550,21 @@ function updateClock() {
 }
 setInterval(updateClock, 1000);
 updateClock();
+
+/* ---------- Tema claro / oscuro ---------- */
+const THEME_KEY = "rutinas_tema";
+const currentTheme = () => (document.documentElement.dataset.theme === "light" ? "light" : "dark");
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  try { localStorage.setItem(THEME_KEY, t); } catch (_) { /* sin almacenamiento */ }
+  const btn = $("#btnTheme");
+  btn.textContent = t === "dark" ? "☀️" : "🌙";
+  btn.setAttribute("aria-label", t === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro");
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = t === "dark" ? "#2b2540" : "#ffc98b";
+}
+$("#btnTheme").addEventListener("click", () => applyTheme(currentTheme() === "dark" ? "light" : "dark"));
+applyTheme(currentTheme());
 
 /* ---------- Arranque ---------- */
 $("#ringFg").style.strokeDasharray = String(RING_C);
