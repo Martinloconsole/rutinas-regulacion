@@ -26,7 +26,7 @@ jobs:
       - name: Preparar los archivos web
         run: |
           mkdir -p www
-          cp index.html styles.css app.js manifest.json sw.js icon.svg icon-192.png icon-512.png www/
+          cp index.html styles.css app.js config.js manifest.json sw.js icon.svg icon-192.png icon-512.png www/
 
       - name: Instalar Capacitor y crear proyecto Android
         run: |
