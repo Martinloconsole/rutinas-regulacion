@@ -1,0 +1,59 @@
+name: Generar APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Preparar los archivos web
+        run: |
+          mkdir -p www
+          cp index.html styles.css app.js manifest.json sw.js icon.svg icon-192.png icon-512.png www/
+
+      - name: Instalar Capacitor y crear proyecto Android
+        run: |
+          npm install
+          npx cap add android
+
+      - name: Poner el ícono de la app
+        run: |
+          RES=android/app/src/main/res
+          rm -rf "$RES/mipmap-anydpi-v26"
+          for pair in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
+            d="${pair%%:*}"; s="${pair##*:}"
+            mkdir -p "$RES/mipmap-$d"
+            if command -v magick >/dev/null 2>&1; then
+              magick icon-512.png -resize "${s}x${s}" "$RES/mipmap-$d/ic_launcher.png"
+            else
+              convert icon-512.png -resize "${s}x${s}" "$RES/mipmap-$d/ic_launcher.png"
+            fi
+            cp "$RES/mipmap-$d/ic_launcher.png" "$RES/mipmap-$d/ic_launcher_round.png"
+          done
+
+      - name: Compilar el APK
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      - name: Guardar el APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: rutinas-regulacion-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
