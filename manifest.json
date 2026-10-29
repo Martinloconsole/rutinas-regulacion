@@ -1,0 +1,15 @@
+{
+  "name": "Rutinas de Regulación",
+  "short_name": "Rutinas",
+  "description": "Hábitos de día y de noche, temporizador y rendimiento.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffc98b",
+  "theme_color": "#ffc98b",
+  "lang": "es",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

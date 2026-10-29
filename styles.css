@@ -1,0 +1,286 @@
+/* =====================================================================
+   RUTINAS DE REGULACIÓN — SISTEMA DE DISEÑO
+   Todo el aspecto se controla desde las variables de :root.
+   Cambia estos valores y la app entera cambia de color.
+   ===================================================================== */
+:root {
+  /* ---------- Gradiente de DÍA (arriba → abajo) ---------- */
+  --day-1: #fff1b8;
+  --day-2: #ffc98b;
+  --day-3: #ff9f9a;
+
+  /* ---------- Gradiente de NOCHE (arriba → abajo) ---------- */
+  --night-1: #4b3b8f;
+  --night-2: #241e5a;
+  --night-3: #0a0d2c;
+
+  /* ---------- Acentos ---------- */
+  --accent-day: #ff8a3d;
+  --accent-day-2: #ff5f7e;
+  --accent-night: #8b7bff;
+  --accent-night-2: #5ec8ff;
+
+  /* ---------- Botones ---------- */
+  --btn-bg: linear-gradient(135deg, var(--accent-day), var(--accent-day-2));
+  --btn-text: #ffffff;
+  --btn-soft-bg: rgba(255, 255, 255, 0.65);
+  --btn-soft-text: #5b3d26;
+  --btn-night-bg: linear-gradient(135deg, var(--accent-night), var(--accent-night-2));
+
+  /* ---------- Tarjetas ---------- */
+  --card-day-bg: rgba(255, 255, 255, 0.74);
+  --card-day-border: rgba(255, 255, 255, 0.95);
+  --card-night-bg: rgba(24, 22, 64, 0.7);
+  --card-night-border: rgba(255, 255, 255, 0.14);
+
+  /* ---------- Textos ---------- */
+  --text-day: #3b2a1a;
+  --text-day-soft: #7a604a;
+  --text-night: #eef0ff;
+  --text-night-soft: #aeb3e0;
+
+  /* ---------- Estados ---------- */
+  --ok: #2fc47a;
+  --danger: #ef5b5b;
+
+  /* ---------- Forma ---------- */
+  --radius: 18px;
+  --radius-lg: 28px;
+  --shadow: 0 10px 30px rgba(60, 30, 10, 0.15);
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* Lo actualiza app.js al hacer scroll (0 = día, 1 = noche). No tocar. */
+  --night-progress: 0;
+}
+
+/* ===================================================================== */
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  font-family: var(--font);
+  color: var(--text-day);
+  min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------- Fondo con transición día → noche ---------- */
+.bg { position: fixed; inset: 0; z-index: -2; }
+.bg-day { background: linear-gradient(180deg, var(--day-1) 0%, var(--day-2) 55%, var(--day-3) 100%); }
+.bg-night {
+  z-index: -1;
+  background: linear-gradient(180deg, var(--night-1) 0%, var(--night-2) 50%, var(--night-3) 100%);
+  opacity: var(--night-progress);
+  transition: opacity 0.18s linear;
+}
+
+main { max-width: 640px; margin: 0 auto; padding: 18px 16px 170px; }
+.view { animation: fade 0.3s ease; }
+@keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+h1 { font-size: 1.7rem; margin: 0; letter-spacing: -0.02em; }
+h2 { margin: 0; font-size: 1.1rem; }
+.muted { color: var(--text-day-soft); margin: 4px 0 0; }
+.page-header { margin: 28px 0 18px; }
+.page-header.compact { margin-bottom: 10px; }
+body[data-view="dashboard"] .page-header h1,
+body[data-view="dashboard"] .page-header .muted { text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35); }
+
+/* ---------- Estado de sincronización ---------- */
+.sync {
+  position: fixed; top: calc(8px + env(safe-area-inset-top)); right: 10px; z-index: 30;
+  font-size: 0.72rem; padding: 4px 10px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8); color: var(--text-day);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+.sync::before { content: "● "; color: #999; }
+.sync[data-state="ok"]::before { color: var(--ok); }
+.sync[data-state="sync"]::before { color: var(--accent-day); }
+.sync[data-state="error"]::before { color: var(--danger); }
+
+/* ---------- Botones ---------- */
+.btn {
+  border: 0; cursor: pointer; font: inherit; font-weight: 700;
+  padding: 13px 22px; border-radius: 999px; transition: transform 0.12s, box-shadow 0.2s, opacity 0.2s;
+}
+.btn:active { transform: scale(0.96); }
+.btn-primary { background: var(--btn-bg); color: var(--btn-text); box-shadow: 0 8px 20px rgba(255, 95, 126, 0.35); }
+.btn-soft { background: var(--btn-soft-bg); color: var(--btn-soft-text); }
+.btn-block { width: 100%; }
+
+/* ---------- Tarjetas ---------- */
+.card {
+  border-radius: var(--radius-lg); padding: 20px;
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  box-shadow: var(--shadow);
+}
+.card-day { background: var(--card-day-bg); border: 1px solid var(--card-day-border); color: var(--text-day); }
+.card-night { background: var(--card-night-bg); border: 1px solid var(--card-night-border); color: var(--text-night); margin-top: 16px; }
+
+/* ---------- Vista 1: configuración ---------- */
+.list-title { margin: 26px 0 10px; display: flex; gap: 8px; align-items: center; }
+.cfg-list, .habit-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.cfg-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 14px 16px; border-radius: var(--radius);
+  background: var(--card-day-bg); border: 1px solid var(--card-day-border);
+}
+.cfg-item .name { font-weight: 600; }
+.cfg-item .time { color: var(--text-day-soft); font-size: 0.85rem; }
+.cfg-item .del {
+  border: 0; background: rgba(239, 91, 91, 0.12); color: var(--danger);
+  width: 34px; height: 34px; border-radius: 50%; cursor: pointer; font-size: 1rem;
+}
+.empty { color: var(--text-day-soft); font-size: 0.9rem; padding: 6px 4px; }
+.period-noche .empty { color: var(--text-night-soft); }
+.fab-cta {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(82px + env(safe-area-inset-bottom)); z-index: 20; white-space: nowrap;
+}
+.fab-cta:active { transform: translateX(-50%) scale(0.96); }
+
+/* ---------- Vista 2: timeline ---------- */
+.timeline-wrap { margin: 0 -16px; }
+.timeline {
+  display: flex; gap: 8px; overflow-x: auto; padding: 10px 16px 14px;
+  scroll-snap-type: x proximity; scrollbar-width: none;
+}
+.timeline::-webkit-scrollbar { display: none; }
+.day-btn {
+  flex: 0 0 auto; width: 54px; padding: 8px 0; border-radius: 16px; cursor: pointer;
+  border: 2px solid transparent; background: rgba(255, 255, 255, 0.45); color: var(--text-day);
+  display: grid; justify-items: center; gap: 2px; font: inherit; scroll-snap-align: center;
+}
+.day-btn small { font-size: 0.68rem; opacity: 0.75; text-transform: uppercase; }
+.day-btn b { font-size: 1.15rem; }
+.day-btn.past { opacity: 0.75; }
+.day-btn.today { border-color: var(--accent-day-2); box-shadow: 0 0 0 3px rgba(255, 95, 126, 0.2); }
+.day-btn.selected { background: var(--btn-bg); color: #fff; }
+.day-btn.selected small { opacity: 0.95; }
+
+/* ---------- Vista 2: secciones día / noche ---------- */
+.period { margin-top: 18px; border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow); }
+.period-dia {
+  background: var(--card-day-bg); border: 1px solid var(--card-day-border); color: var(--text-day);
+  min-height: 50vh;
+}
+.period-noche {
+  background: var(--card-night-bg); border: 1px solid var(--card-night-border); color: var(--text-night);
+  margin-top: 40vh; min-height: 60vh; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.period-head { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+.period-head > div { flex: 1; }
+.period-icon { width: 46px; height: 46px; flex: none; }
+.period-dia .period-icon { color: var(--accent-day); animation: spin 30s linear infinite; }
+.period-noche .period-icon { color: #ffe9a8; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.period-time { margin: 2px 0 0; font-size: 0.88rem; opacity: 0.8; }
+.count-pill { font-size: 0.8rem; font-weight: 700; padding: 5px 11px; border-radius: 999px; background: rgba(0, 0, 0, 0.08); }
+.period-noche .count-pill { background: rgba(255, 255, 255, 0.14); }
+
+.habit {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; border-radius: var(--radius); background: rgba(255, 255, 255, 0.55);
+}
+.period-noche .habit { background: rgba(255, 255, 255, 0.08); }
+.habit .h-name { font-weight: 600; display: block; }
+.habit .h-time { font-size: 0.8rem; opacity: 0.7; }
+.habit.done .h-name { text-decoration: line-through; opacity: 0.65; }
+
+.check {
+  flex: none; width: 46px; height: 46px; border-radius: 50%; cursor: pointer;
+  border: 3px solid var(--accent-day); background: transparent; color: #fff;
+  display: grid; place-items: center; transition: all 0.2s;
+}
+.period-noche .check { border-color: var(--accent-night-2); }
+.check svg { width: 24px; height: 24px; opacity: 0; transform: scale(0.4); transition: all 0.2s; }
+.check[aria-pressed="true"] { background: var(--ok); border-color: var(--ok); animation: pop 0.3s ease; }
+.check[aria-pressed="true"] svg { opacity: 1; transform: scale(1); }
+@keyframes pop { 50% { transform: scale(1.18); } }
+
+/* ---------- Vista 3: temporizador ---------- */
+.timer-card { text-align: center; }
+.clock-label { margin: 0; font-size: 0.78rem; color: var(--text-day-soft); text-transform: uppercase; letter-spacing: 0.08em; }
+.clock { margin: 2px 0 14px; font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ring-wrap { position: relative; width: min(72vw, 280px); margin: 0 auto 16px; aspect-ratio: 1; }
+.ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring circle { fill: none; stroke-width: 12; }
+.ring-bg { stroke: rgba(0, 0, 0, 0.08); }
+.ring-fg { stroke: var(--accent-day); stroke-linecap: round; stroke-dasharray: 565.49; stroke-dashoffset: 0; transition: stroke-dashoffset 0.25s linear; }
+.ring-center { position: absolute; inset: 0; display: grid; place-content: center; gap: 2px; }
+.timer-display { font-size: 2.8rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.timer-msg { font-size: 0.85rem; color: var(--text-day-soft); }
+.timer-card.finished .ring-fg { stroke: var(--ok); }
+.timer-card.finished .timer-display { animation: pulse 0.8s ease infinite alternate; }
+@keyframes pulse { to { transform: scale(1.08); } }
+
+.presets { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 14px; }
+.chip {
+  border: 2px solid transparent; background: var(--btn-soft-bg); color: var(--btn-soft-text);
+  padding: 8px 14px; border-radius: 999px; font: inherit; font-weight: 600; cursor: pointer;
+}
+.chip.active { border-color: var(--accent-day); background: #fff; }
+.chip:disabled, .custom-time button:disabled, .custom-time input:disabled { opacity: 0.45; cursor: not-allowed; }
+.custom-time { display: flex; gap: 10px; align-items: end; justify-content: center; margin-bottom: 18px; flex-wrap: wrap; }
+.custom-time label { display: grid; gap: 4px; font-size: 0.78rem; color: var(--text-day-soft); text-align: left; }
+.custom-time input { width: 76px; padding: 10px; border-radius: 12px; border: 1px solid rgba(0, 0, 0, 0.15); font: inherit; background: #fff; }
+.timer-controls { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+/* ---------- Vista 4: rendimiento ---------- */
+.stats-block h2 { margin-bottom: 14px; }
+.stats-top { display: flex; align-items: center; gap: 18px; margin-bottom: 18px; }
+.donut { width: 112px; height: 112px; flex: none; }
+.donut circle { fill: none; stroke-width: 14; }
+.donut .d-bg { stroke: rgba(128, 128, 128, 0.2); }
+.donut .d-fg { stroke: var(--accent-day); stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dasharray 0.6s ease; }
+.card-night .donut .d-fg { stroke: var(--accent-night-2); }
+.donut text { font-size: 22px; font-weight: 800; fill: currentColor; text-anchor: middle; dominant-baseline: central; }
+.stats-meta p { margin: 4px 0; font-size: 0.92rem; }
+.stats-meta b { font-size: 1.15rem; }
+.bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; align-items: end; height: 130px; }
+.bar-col { display: grid; grid-template-rows: 1fr auto auto; justify-items: center; gap: 4px; height: 100%; font-size: 0.72rem; }
+.bar-track { width: 100%; max-width: 30px; height: 100%; border-radius: 10px; background: rgba(128, 128, 128, 0.18); display: flex; align-items: end; overflow: hidden; }
+.bar-fill { width: 100%; border-radius: 10px; background: linear-gradient(180deg, var(--accent-day), var(--accent-day-2)); transition: height 0.6s ease; }
+.card-night .bar-fill { background: var(--btn-night-bg); }
+.bar-col.today b { text-decoration: underline; }
+
+/* ---------- Modal ---------- */
+dialog { border: 0; padding: 0; background: transparent; width: min(92vw, 420px); max-width: none; color: var(--text-day); }
+dialog::backdrop { background: rgba(20, 10, 40, 0.5); backdrop-filter: blur(4px); }
+.dialog-card { background: #fff8ef; border-radius: var(--radius-lg); padding: 24px; display: grid; gap: 16px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3); }
+.field { display: grid; gap: 6px; border: 0; padding: 0; margin: 0; }
+.field > span, .field legend { font-size: 0.82rem; font-weight: 700; color: var(--text-day-soft); padding: 0; }
+.field input[type="text"], .field input[type="time"] {
+  font: inherit; padding: 12px 14px; border-radius: 14px; border: 2px solid rgba(0, 0, 0, 0.1); background: #fff; color: var(--text-day);
+}
+.field input:focus { outline: none; border-color: var(--accent-day); }
+.segmented { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.segmented input { position: absolute; opacity: 0; pointer-events: none; }
+.segmented span { display: block; text-align: center; padding: 12px; border-radius: 14px; border: 2px solid rgba(0, 0, 0, 0.1); background: #fff; font-weight: 700; cursor: pointer; }
+.segmented input:checked + span { border-color: var(--accent-day); background: #ffe7cf; }
+.segmented input:focus-visible + span { outline: 3px solid var(--accent-night); }
+.dialog-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+/* ---------- Navegación inferior ---------- */
+.bottom-nav {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.82); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.12);
+}
+.bottom-nav button {
+  border: 0; background: none; font: inherit; font-size: 0.72rem; font-weight: 600; color: var(--text-day-soft);
+  display: grid; justify-items: center; gap: 2px; padding: 6px; border-radius: 14px; cursor: pointer;
+}
+.bottom-nav button span { font-size: 1.3rem; }
+.bottom-nav button.active { color: var(--accent-day-2); background: rgba(255, 138, 61, 0.14); }
+
+@media (min-width: 700px) {
+  main { padding-top: 30px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

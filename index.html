@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ffc98b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Rutinas de Regulación</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-view="dashboard">
+  <!-- Capas de fondo: el gradiente de noche se funde sobre el de día según el scroll -->
+  <div class="bg bg-day" aria-hidden="true"></div>
+  <div class="bg bg-night" aria-hidden="true"></div>
+
+  <div id="syncStatus" class="sync" data-state="local" role="status">Solo local</div>
+
+  <main>
+    <!-- ===================== VISTA 1: CONFIGURACIÓN ===================== -->
+    <section id="view-config" class="view" hidden>
+      <header class="page-header">
+        <h1>Rutina de Regulación</h1>
+        <p class="muted">Crea y ordena los hábitos de tu día y de tu noche.</p>
+      </header>
+
+      <button id="btnNewHabit" class="btn btn-primary btn-block">+ Nuevo Hábito</button>
+
+      <h2 class="list-title"><span class="icon-sun" aria-hidden="true">☀️</span> Hábitos diurnos</h2>
+      <ul id="cfg-dia" class="cfg-list"></ul>
+
+      <h2 class="list-title"><span aria-hidden="true">🌙</span> Hábitos nocturnos</h2>
+      <ul id="cfg-noche" class="cfg-list"></ul>
+
+      <button id="btnGoMain" class="fab-cta btn btn-primary">Ir al Apartado Principal →</button>
+    </section>
+
+    <!-- ===================== VISTA 2: DASHBOARD ===================== -->
+    <section id="view-dashboard" class="view" hidden>
+      <header class="page-header compact">
+        <h1>Mi rutina</h1>
+        <p id="dashDate" class="muted"></p>
+      </header>
+
+      <div class="timeline-wrap">
+        <div id="timeline" class="timeline" role="listbox" aria-label="Días"></div>
+      </div>
+
+      <section class="period period-dia" aria-labelledby="t-dia">
+        <div class="period-head">
+          <svg class="period-icon" viewBox="0 0 64 64" aria-hidden="true">
+            <circle cx="32" cy="32" r="12" fill="currentColor"/>
+            <g stroke="currentColor" stroke-width="4" stroke-linecap="round">
+              <path d="M32 6v8M32 50v8M6 32h8M50 32h8M13.6 13.6l5.6 5.6M44.8 44.8l5.6 5.6M13.6 50.4l5.6-5.6M44.8 19.2l5.6-5.6"/>
+            </g>
+          </svg>
+          <div>
+            <h2 id="t-dia">Rutina diurna</h2>
+            <p class="period-time">Inicia a las <strong id="start-dia">--:--</strong></p>
+          </div>
+          <span id="count-dia" class="count-pill">0/0</span>
+        </div>
+        <ul id="list-dia" class="habit-list"></ul>
+      </section>
+
+      <section class="period period-noche" aria-labelledby="t-noche">
+        <div class="period-head">
+          <svg class="period-icon" viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M44 8a26 26 0 1 0 12 40A22 22 0 0 1 44 8z" fill="currentColor"/>
+          </svg>
+          <div>
+            <h2 id="t-noche">Rutina nocturna</h2>
+            <p class="period-time">Inicia a las <strong id="start-noche">--:--</strong></p>
+          </div>
+          <span id="count-noche" class="count-pill">0/0</span>
+        </div>
+        <ul id="list-noche" class="habit-list"></ul>
+      </section>
+    </section>
+
+    <!-- ===================== VISTA 3: HERRAMIENTAS ===================== -->
+    <section id="view-timer" class="view" hidden>
+      <header class="page-header">
+        <h1>Herramientas</h1>
+        <p class="muted">Temporizador para tus hábitos.</p>
+      </header>
+
+      <div class="card card-day timer-card">
+        <p class="clock-label">Hora actual</p>
+        <p id="clock" class="clock">--:--:--</p>
+
+        <div class="ring-wrap">
+          <svg viewBox="0 0 200 200" class="ring" aria-hidden="true">
+            <circle class="ring-bg" cx="100" cy="100" r="90"/>
+            <circle id="ringFg" class="ring-fg" cx="100" cy="100" r="90"/>
+          </svg>
+          <div class="ring-center">
+            <span id="timerDisplay" class="timer-display">05:00</span>
+            <span id="timerMsg" class="timer-msg">Listo</span>
+          </div>
+        </div>
+
+        <div id="presets" class="presets" role="group" aria-label="Tiempos rápidos">
+          <button class="chip" data-min="1">1 min</button>
+          <button class="chip" data-min="5">5 min</button>
+          <button class="chip" data-min="10">10 min</button>
+          <button class="chip" data-min="15">15 min</button>
+          <button class="chip" data-min="25">25 min</button>
+          <button class="chip" data-min="45">45 min</button>
+        </div>
+
+        <div class="custom-time">
+          <label>Min <input id="cMin" type="number" min="0" max="180" value="5" inputmode="numeric"></label>
+          <label>Seg <input id="cSec" type="number" min="0" max="59" value="0" inputmode="numeric"></label>
+          <button id="btnSetCustom" class="btn btn-soft">Fijar</button>
+        </div>
+
+        <div class="timer-controls">
+          <button id="btnStart" class="btn btn-primary">Iniciar</button>
+          <button id="btnPause" class="btn btn-primary" hidden>Pausa</button>
+          <button id="btnResume" class="btn btn-primary" hidden>Reanudar</button>
+          <button id="btnReset" class="btn btn-soft">Restablecer</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== VISTA 4: RENDIMIENTO ===================== -->
+    <section id="view-stats" class="view" hidden>
+      <header class="page-header">
+        <h1>Rendimiento</h1>
+        <p class="muted">Cumplimiento de los últimos 7 días.</p>
+      </header>
+      <div id="stats-dia" class="card card-day stats-block"></div>
+      <div id="stats-noche" class="card card-night stats-block"></div>
+    </section>
+  </main>
+
+  <!-- ===================== MODAL NUEVO HÁBITO ===================== -->
+  <dialog id="habitDialog">
+    <form id="habitForm" method="dialog" class="dialog-card">
+      <h2>Nuevo hábito</h2>
+
+      <label class="field">
+        <span>Nombre del hábito</span>
+        <input id="fName" type="text" maxlength="60" required placeholder="Ej. Tomar un vaso de agua">
+      </label>
+
+      <fieldset class="field">
+        <legend>Categoría</legend>
+        <div class="segmented">
+          <label><input type="radio" name="fPeriod" value="dia" checked><span>☀️ Día</span></label>
+          <label><input type="radio" name="fPeriod" value="noche"><span>🌙 Noche</span></label>
+        </div>
+      </fieldset>
+
+      <label class="field">
+        <span>Horario estimado de inicio</span>
+        <input id="fTime" type="time" value="08:00" required>
+      </label>
+
+      <div class="dialog-actions">
+        <button type="button" id="btnCancel" class="btn btn-soft">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ===================== NAVEGACIÓN INFERIOR ===================== -->
+  <nav class="bottom-nav" aria-label="Principal">
+    <button data-view="config"><span>🌱</span>Hábitos</button>
+    <button data-view="dashboard"><span>☀️</span>Hoy</button>
+    <button data-view="timer"><span>⏱️</span>Timer</button>
+    <button data-view="stats"><span>📊</span>Datos</button>
+  </nav>
+
+  <script src="app.js"></script>
+</body>
+</html>
