@@ -34,19 +34,21 @@ jobs:
           npx cap add android
 
       - name: Poner el ícono de la app
+        continue-on-error: true
         run: |
-          RES=android/app/src/main/res
-          rm -rf "$RES/mipmap-anydpi-v26"
-          for pair in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
-            d="${pair%%:*}"; s="${pair##*:}"
-            mkdir -p "$RES/mipmap-$d"
-            if command -v magick >/dev/null 2>&1; then
-              magick icon-512.png -resize "${s}x${s}" "$RES/mipmap-$d/ic_launcher.png"
-            else
-              convert icon-512.png -resize "${s}x${s}" "$RES/mipmap-$d/ic_launcher.png"
-            fi
-            cp "$RES/mipmap-$d/ic_launcher.png" "$RES/mipmap-$d/ic_launcher_round.png"
-          done
+          pip install pillow
+          python3 - <<'PY'
+          import os, shutil
+          from PIL import Image
+          res = "android/app/src/main/res"
+          shutil.rmtree(res + "/mipmap-anydpi-v26", ignore_errors=True)
+          for d, s in (("mdpi", 48), ("hdpi", 72), ("xhdpi", 96), ("xxhdpi", 144), ("xxxhdpi", 192)):
+              folder = res + "/mipmap-" + d
+              os.makedirs(folder, exist_ok=True)
+              img = Image.open("icon-512.png").convert("RGBA").resize((s, s), Image.LANCZOS)
+              img.save(folder + "/ic_launcher.png")
+              img.save(folder + "/ic_launcher_round.png")
+          PY
 
       - name: Compilar el APK
         working-directory: android
